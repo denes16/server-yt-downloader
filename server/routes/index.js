@@ -4,47 +4,123 @@ router.get('/', (req, res) => {
     res.json({ s: true });
 });
 
-router.get('/info', (req, res) => {
+router.get('/info', async (req, res) => {
     const url = req.query.url;
-    if (!url) {
-    }
-    ytdl.getInfo(url)
-        .then((d) => {
-            res.json({ d });
-        })
-        .catch((e) => {
-            res.json({ e });
+    try {
+        data = await ytdl.getInfo(url);
+        const {
+            player_response: {
+                videoDetails: {
+                    title,
+                    author,
+                    thumbnail: { thumbnails },
+                },
+            },
+        } = data;
+        const thumbnail = thumbnails[0];
+        const videoFormats = data.formats
+            .filter((v) => v.container === 'mp4' && v.hasAudio && v.hasVideo)
+            .map((v) => {
+                v.format = 'mp4';
+                return v;
+            });
+        const audioFormats = [];
+        audioFormats.push({
+            ...ytdl.chooseFormat(data.formats, { quality: 'highestaudio' }),
+            qualityLabel: 'Alta',
         });
-});
-router.post('/download', async (req, res) => {
-    let { url, quality } = req.body;
-    quality = 19;
-    let video = true;
-    if (req.body.audio) {
-        video = false;
-        console.log('hey');
+        audioFormats.push({
+            ...ytdl.chooseFormat(data.formats, { quality: 'lowestaudio' }),
+            qualityLabel: 'Baja',
+        });
+        audioFormats.forEach((v) => (v.format = 'mp3'));
+        const finalFormats = audioFormats.concat(videoFormats).map((v) => {
+            return {
+                itag: v.itag,
+                quality: v.qualityLabel,
+                size: Number(v.contentLength),
+                format: v.format,
+                url: v.url,
+            };
+        });
+        res.json({
+            status: true,
+            data: {
+                title,
+                author,
+                thumbnail,
+                formats: finalFormats,
+            },
+        });
+    } catch (error) {
+        let msg = 'Ha ocurrido un error';
+        let status = 400;
+        switch (error.message) {
+            case 'Video unavailable':
+                msg = 'Video no encontrado';
+                break;
+            case 'Not a YouTube domain':
+                msg = 'Url inválida';
+                break;
+            default:
+                status = 500;
+                break;
+        }
+        console.log(error.message);
+        res.status(status).json({ success: false, error: { msg } });
     }
-    res.header('Content-Disposition', 'attachment; filename="video.mp4"');
+});
+router.get('/download/:quality/:name', async (req, res) => {
+    let { quality, name } = req.params;
+    const { url, audio } = req.query;
+    let video = true;
+    if (audio) {
+        video = false;
+    }
     try {
         const data = await ytdl.getInfo(url);
+        const formats = data.formats;
+        // VALIDATIONS
         // Validate quiality itag
-        if (
-            !data.player_response.streamingData.formats.find(
-                (v) => v.itag === quality,
-            )
-        ) {
+        if (!formats.find((v) => v.itag == quality)) {
             // res.json({ d: 'Invalid quiality' });
             throw new Error('Invalid quality');
         }
-        // ytdl(url, {
-        //     format: 'mp4',
-        //     quality,
-        // }).pipe(res);
-    } catch (error) {
-        if(error.name === 'Error') {
-            res.status(500).json({ d: 'd' });
+        // DOWNLOAD
+        if (!video) {
+            // Download mp3
+            const formatElegido = ytdl.chooseFormat(data.formats, {
+                filter: 'audioonly',
+                quality,
+            });
+            const fileSize = formatElegido.contentLength;
+            let name = data.player_response.videoDetails.title
+                .toLocaleLowerCase()
+                .replace(/\s/g, '-');
+            res.header(
+                'Content-Disposition',
+                `attachment; filename="${name}.mp3"`
+            );
+            res.header('content-length', fileSize);
+            // ytdl(url, {
+            //     filter: (format) =>
+            //         format.container === 'm4a' && !format.encoding,
+            //     quality: quality === 'high' ? 'highest' : 'lowest',
+            // }).pipe(res);
+            ytdl.downloadFromInfo(data, {
+                format: formatElegido,
+            }).pipe(res);
         }
-        console.log('d', {n: error.name, m: error.message});
+    } catch (error) {
+        if (error.name === 'Error') {
+            return res
+                .status(400)
+                .json({ success: false, error: { msg: error.message } });
+        }
+        console.log('error 500', { n: error.name, m: error.message });
+        return res
+            .status(500)
+            .json({ success: false, error: { msg: 'Ha ocurrido un error' } });
     }
 });
 module.exports = router;
