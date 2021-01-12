@@ -110,6 +110,10 @@ router.get('/download/:quality/:name', async (req, res) => {
             ytdl.downloadFromInfo(data, {
                 format: formatElegido,
             }).pipe(res);
+        } else {
+            ytdl.downloadFromInfo(data, {
+                quality,
+            }).pipe(res);
         }
     } catch (error) {
         if (error.name === 'Error') {
