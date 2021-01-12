@@ -102,11 +102,6 @@ router.get('/download/:quality/:name', async (req, res) => {
                 `attachment; filename="${name}.mp3"`
             );
             res.header('content-length', fileSize);
-            // ytdl(url, {
-            //     filter: (format) =>
-            //         format.container === 'm4a' && !format.encoding,
-            //     quality: quality === 'high' ? 'highest' : 'lowest',
-            // }).pipe(res);
             ytdl.downloadFromInfo(data, {
                 format: formatElegido,
             }).pipe(res);
@@ -119,11 +114,13 @@ router.get('/download/:quality/:name', async (req, res) => {
             const fileSize = formatElegido.contentLength;
             res.header(
                 'Content-Disposition',
-                `attachment; filename="${name}.mp3"`
-            );
-            res.header('content-length', fileSize);
+                `attachment; filename="${name}.mp4"`
+                );
+            if(fileSize){
+                res.header('content-length', fileSize);
+            }
             ytdl.downloadFromInfo(data, {
-                quality,
+                format: formatElegido,
             }).pipe(res);
         }
     } catch (error) {
