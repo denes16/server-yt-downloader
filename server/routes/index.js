@@ -111,6 +111,16 @@ router.get('/download/:quality/:name', async (req, res) => {
                 format: formatElegido,
             }).pipe(res);
         } else {
+            const formatElegido = ytdl.chooseFormat(data.formats, {
+                quality,
+            });
+            const name = data.player_response.videoDetails.title;
+            const fileSize = formatElegido.contentLength;
+            res.header(
+                'Content-Disposition',
+                `attachment; filename="${name}.mp3"`
+            );
+            res.header('content-length', fileSize);
             ytdl.downloadFromInfo(data, {
                 quality,
             }).pipe(res);
