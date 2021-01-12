@@ -114,7 +114,8 @@ router.get('/download/:quality/:name', async (req, res) => {
             const formatElegido = ytdl.chooseFormat(data.formats, {
                 quality,
             });
-            const name = data.player_response.videoDetails.title;
+            let name = data.player_response.videoDetails.title;
+            name = name.replace(/([\uE000-\uF8FF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDDFF])/g, '');
             const fileSize = formatElegido.contentLength;
             res.header(
                 'Content-Disposition',
