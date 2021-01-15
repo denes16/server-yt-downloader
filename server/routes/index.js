@@ -94,11 +94,14 @@ router.get('/download/:quality', async (req, res) => {
         if (fileSize) {
             res.header('content-length', fileSize);
         }
+        let name = data.player_response.videoDetails.title
+            .toLocaleLowerCase()
+            .replace(/\s/g, '-');
+        name = name.replace(
+            /([\uE000-\uF8FF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDDFF])/g,
+            ''
+        );
         if (!video) {
-            // Download mp3
-            let name = data.player_response.videoDetails.title
-                .toLocaleLowerCase()
-                .replace(/\s/g, '-');
             res.header(
                 'Content-Disposition',
                 `attachment; filename="${name}.mp3"`
