@@ -87,13 +87,15 @@ router.get('/download/:quality', async (req, res) => {
             throw new Error('Invalid quality');
         }
         // DOWNLOAD
+        const formatElegido = ytdl.chooseFormat(data.formats, {
+            quality,
+        });
+        const fileSize = formatElegido.contentLength;
+        if (fileSize) {
+            res.header('content-length', fileSize);
+        }
         if (!video) {
             // Download mp3
-            const formatElegido = ytdl.chooseFormat(data.formats, {
-                filter: 'audioonly',
-                quality,
-            });
-            const fileSize = formatElegido.contentLength;
             let name = data.player_response.videoDetails.title
                 .toLocaleLowerCase()
                 .replace(/\s/g, '-');
@@ -101,16 +103,15 @@ router.get('/download/:quality', async (req, res) => {
                 'Content-Disposition',
                 `attachment; filename="${name}.mp3"`
             );
-            res.header('content-length', fileSize);
-            // ytdl(url, {
-            //     filter: (format) =>
-            //         format.container === 'm4a' && !format.encoding,
-            //     quality: quality === 'high' ? 'highest' : 'lowest',
-            // }).pipe(res);
-            ytdl.downloadFromInfo(data, {
-                format: formatElegido,
-            }).pipe(res);
+        } else {
+            res.header(
+                'Content-Disposition',
+                `attachment; filename="${name}.mp4"`
+            );
         }
+        ytdl.downloadFromInfo(data, {
+            format: formatElegido,
+        }).pipe(res);
     } catch (error) {
         if (error.name === 'Error') {
             return res
