@@ -70,8 +70,8 @@ router.get('/info', async (req, res) => {
         res.status(status).json({ success: false, error: { msg } });
     }
 });
-router.get('/download/:quality/:name', async (req, res) => {
-    let { quality, name } = req.params;
+router.get('/download/:quality', async (req, res) => {
+    let { quality } = req.params;
     const { url, audio } = req.query;
     let video = true;
     if (audio) {
